@@ -1,7 +1,6 @@
-import { model, Schema, Document, Types, Model, Query } from "mongoose";
+import { model, Schema, Document, Model } from "mongoose";
 import crypto from "crypto";
-
-type UserType = "student" | "teacher";
+import { TSubject, TUser } from "../types";
 
 interface IUser {
   username: string;
@@ -9,19 +8,20 @@ interface IUser {
     hash: string;
     salt: string;
   };
-  userType: UserType;
-  sessionId: string;
-  skillPoints: Record<string, number>;
+  userType: TUser;
+  skillPoints?: Record<TSubject, number>;
+  homeroomId?: string;
 }
 
-interface NewUser {
+interface INewUser {
   username: string;
   password: string;
-  userType: UserType;
+  userType: TUser;
+  homeroomId?: string;
 }
 
 interface IUserModel extends Model<IUserDoc> {
-  _new(newUser: NewUser): Promise<IUserDoc>;
+  _new(newUser: INewUser): Promise<IUserDoc>;
 }
 
 interface IUserDoc extends IUser, Document {
@@ -43,21 +43,37 @@ const UserSchemaFields: Record<keyof IUser, any> = {
     salt: String,
   },
   userType: String,
-  sessionId: String,
-  skillPoints: { type: Object, default: {} },
+  homeroomId: String,
+  skillPoints: Object,
 };
 
 const UserSchema = new Schema(UserSchemaFields, { timestamps: true });
 
-UserSchema.statics._new = function ({ username, userType, password }: NewUser) {
+UserSchema.statics._new = function ({
+  username,
+  userType,
+  password,
+  homeroomId,
+}: INewUser) {
   const user = new User();
   user.username = username;
   user.userType = userType;
+
+  if (user.userType === "student") {
+    user.homeroomId = homeroomId;
+  }
+
   user.password.salt = crypto.randomBytes(16).toString("hex");
 
   user.password.hash = crypto
     .pbkdf2Sync(password, user.password.salt, 1000, 64, "sha512")
     .toString("hex");
+
+  user.skillPoints = {
+    math: 0,
+    english: 0,
+    science: 0,
+  };
 
   return user;
 };

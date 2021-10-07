@@ -9,13 +9,13 @@ router.post("/", async (req: Request, res: Response, next: NextFunction) => {
   try {
     const user = await User.findOne({ username });
 
-    if (!user) {
-      res.sendStatus(404);
+    if (user === null) {
+      return res.status(404).json({ error: "User does not exist" });
     } else {
       const valid = user.validatePassword(password);
 
       if (!valid) {
-        res.sendStatus(401);
+        return res.status(401).json({ error: "Incorrect password!" });
       } else {
         req.session!.userId = user._id.toString();
         res.status(200).json({ user });
